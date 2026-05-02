@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REMAX Progress Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --blue: #003DA5;
+      --navy: #003DA5;
+      --red: #E2001A;
+      --bg: #F0F2F5;
+      --card: #ffffff;
+      --text: #1A1F36;
+      --muted: #6B7280;
+      --border: #DDE1EA;
+      --green: #15803D;
+      --orange: #D97706;
+      --grey: #C4CAD4;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Gotham, "Montserrat", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      position: relative;
+      background: #F2EDE4;
+      color: #0D0D0D;
+      padding: 28px 36px 28px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      overflow: hidden;
+    }
+
+    /* Top colour bar: dark red left half, bright red right half */
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 18px;
+      background: linear-gradient(to right, #6B0010 50%, #E8000C 50%);
+    }
+
+    /* Bottom colour bar: dark navy left half, bright blue right half */
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 18px;
+      background: linear-gradient(to right, #14172B 50%, #1D56F5 50%);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      font-weight: 900;
+      font-size: 36px;
+      letter-spacing: -1px;
+      color: #0D0D0D;
+      line-height: 1;
+    }
+
+    .brand-logo span { color: #0D0D0D; }
+
+    .brand-dashboard {
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #6B0010;
+    }
+
+    .brand-sub {
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: 0.5px;
+      color: #0D0D0D;
+    }
+
+    /* RE/MAX balloon icon made with CSS */
+    .remax-balloon {
+      width: 28px;
+      height: 28px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .remax-balloon svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .month-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.12);
+      padding: 10px 12px;
+      border-radius: 12px;
+      flex-wrap: wrap;
+    }
+
+    .month-control label {
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .month-control input {
+      padding: 9px 10px;
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 10px;
+      background: white;
+      color: var(--navy);
+      font-weight: 800;
+    }
+
+    input, select, button { font-family: inherit; }
+
+    button {
+      border: none;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-red { background: var(--red); color: white; }
+    .btn-blue { background: var(--blue); color: white; }
+    .btn-danger { background: #fee2e2; color: #991b1b; }
+    .btn-card { background: #eef2ff; color: var(--navy); border: 1px solid #c7d7fe; }
+    .btn-card.active { background: var(--navy); color: white; border-color: var(--navy); }
+    .btn-warning { background: #fff7ed; color: #92400e; border: 1px solid #fed7aa; }
+
+    /* ── Month Tabs ── */
+    .month-tabs-bar {
+      background: #002B80;
+      padding: 0 32px;
+      display: flex;
+      gap: 2px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.2) transparent;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .month-tab {
+      background: transparent;
+      color: rgba(255,255,255,0.65);
+      border: none;
+      border-radius: 0;
+      padding: 12px 16px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .month-tab:hover { color: white; }
+
+    .month-tab.active {
+      color: white;
+      border-bottom-color: var(--red);
+      background: rgba(255,255,255,0.08);
+    }
+
+    .tabs, .sub-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 20px 32px 0;
+      flex-wrap: wrap;
+      background: #F0F2F5;
+    }
+
+    .sub-tabs {
+      padding: 0 0 18px;
+      background: transparent;
+    }
+
+    .tab, .sub-tab {
+      background: white;
+      color: var(--muted);
+      padding: 12px 28px;
+      border-radius: 8px 8px 0 0;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border-bottom: 3px solid transparent;
+      border: 1px solid var(--border);
+      border-bottom: 3px solid transparent;
+    }
+
+    .sub-tab {
+      border-radius: 8px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab.active {
+      background: white;
+      color: var(--navy);
+      border-color: var(--border);
+      border-bottom-color: var(--red);
+    }
+
+    .sub-tab.active {
+      background: var(--navy);
+      color: white;
+      border-color: var(--navy);
+    }
+
+    main { padding: 24px 32px 48px; }
+
+    .tab-settings {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 61, 165, 0.06);
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+
+    .tab-settings h3 {
+      margin: 0 0 14px;
+      color: var(--navy);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      border-left: 3px solid var(--red);
+      padding-left: 10px;
+    }
+
+    .tab-settings-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    .tab-settings-grid label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .tab-settings-grid input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+      color: var(--navy);
+      font-weight: 700;
+    }
+
+    .summary-grid, .project-results-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .project-results-grid {
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+    }
+
+    .summary-card, .section, .input-section, .project-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 61, 165, 0.06);
+    }
+
+    .summary-card, .project-card { padding: 20px; min-height: 160px; }
+
+    .summary-card h3, .project-card h3 {
+      margin: 0 0 14px;
+      color: var(--navy);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      min-height: 34px;
+      padding-left: 10px;
+      border-left: 3px solid var(--red);
+    }
+
+    .summary-progress-row, .project-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .summary-target, .project-target {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    .summary-target strong, .project-target strong {
+      color: var(--navy);
+      font-size: 16px;
+    }
+
+    .summary-target span, .project-target span {
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+      font-weight: 800;
+    }
+
+    .circle {
+      --pct: 0;
+      --color: var(--grey);
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: conic-gradient(var(--color) calc(var(--pct) * 1%), #edf0f5 0);
+      display: grid;
+      place-items: center;
+      margin: auto;
+    }
+
+    .circle-inner {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: white;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .summary-circle, .project-circle { width: 76px; height: 76px; flex: 0 0 76px; margin: 0; }
+    .summary-circle .circle-inner, .project-circle .circle-inner { width: 58px; height: 58px; font-size: 16px; }
+
+    .section { margin-bottom: 20px; overflow: hidden; border-radius: 10px; }
+
+    .section-header {
+      background: var(--navy);
+      color: white;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      gap: 12px;
+      border-left: 5px solid var(--red);
+    }
+
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 13px 14px; border-bottom: 1px solid var(--border); text-align: left; font-size: 14px; vertical-align: middle; }
+    th { color: var(--navy); background: #F7F9FC; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; }
+
+    .bar-wrap { width: 100%; background: #edf0f5; height: 12px; border-radius: 999px; overflow: hidden; margin-top: 6px; }
+    .bar { height: 100%; width: 0%; background: var(--grey); border-radius: 999px; }
+
+    .percentage-card { display: inline-block; padding: 8px 12px; border-radius: 999px; font-weight: 900; background: #eef2ff; color: var(--navy); }
+
+    /* ── Not Tracked Badge ── */
+    .not-tracked-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      background: #f1f3f7;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+
+    .not-tracked-badge::before {
+      content: '—';
+      font-size: 13px;
+      color: var(--grey);
+    }
+
+    .input-section { padding: 20px; margin-bottom: 20px; }
+
+    .input-section-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 14px; }
+
+    .section-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--navy);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      width: 100%;
+    }
+
+    .metric-editor, .task-editor { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 12px; background: #F7F9FC; }
+
+    .metric-title-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr auto auto; gap: 10px; align-items: center; }
+    .task-title-row { display: grid; grid-template-columns: 1.6fr 1fr auto; gap: 10px; align-items: center; }
+
+    .editor-grid { display: grid; grid-template-columns: repeat(6, minmax(110px, 1fr)); gap: 10px; margin-top: 12px; }
+
+    .editor-grid label { font-size: 11px; color: var(--muted); font-weight: 800; text-transform: uppercase; }
+
+    .editor-grid input, .metric-title-row input, .metric-title-row select, .task-title-row input, .task-title-row select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+    }
+
+    .empty { padding: 35px; text-align: center; background: white; border: 1px dashed var(--border); border-radius: 16px; color: var(--muted); }
+    .hidden { display: none; }
+
+    /* Month indicator pill */
+    .month-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0,0,0,0.07);
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #14172B;
+    }
+
+    .month-pill .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #E8000C;
+    }
+
+    @media (max-width: 1100px) {
+      .summary-grid, .project-results-grid, .tab-settings-grid { grid-template-columns: repeat(2, 1fr); }
+      .editor-grid { grid-template-columns: repeat(2, 1fr); }
+      .metric-title-row, .task-title-row { grid-template-columns: 1fr; }
+      table { display: block; overflow-x: auto; }
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 18px 14px; }
+      .tabs { padding-left: 14px; padding-right: 14px; }
+      .tab { flex: 1; text-align: center; padding: 14px 10px; }
+      .summary-grid, .project-results-grid, .tab-settings-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-top">
+        <div class="brand-logo">REMAX</div>
+        <div class="brand-dashboard">Dashboard</div>
+      </div>
+      <div class="brand-sub">Premier</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; position:relative; z-index:1;">
+      <div id="activeMonthPill" class="month-pill"><span class="dot"></span><span id="activeMonthLabel">January</span></div>
+      <button class="btn-warning" id="clearAchievedBtn" style="font-size:13px;">Clear Achieved Data</button>
+    </div>
+  </header>
+
+  <!-- Month Tabs -->
+  <div class="month-tabs-bar" id="monthTabsBar"></div>
+
+  <nav class="tabs">
+    <button class="tab active" id="inputTabBtn">Input</button>
+    <button class="tab" id="resultsTabBtn">Results</button>
+    <button class="tab" id="projectTabBtn">Project Dashboard</button>
+  </nav>
+
+  <main>
+    <section id="inputTab">
+      <div class="tab-settings">
+        <h3>Rename Tabs</h3>
+        <div class="tab-settings-grid">
+          <div><label>Main Tab 1</label><input id="tabNameInput" type="text" /></div>
+          <div><label>Main Tab 2</label><input id="tabNameResults" type="text" /></div>
+          <div><label>Main Tab 3</label><input id="tabNameProject" type="text" /></div>
+          <div><label>Project Sub-Tab 1</label><input id="tabNameProjectInput" type="text" /></div>
+          <div><label>Project Sub-Tab 2</label><input id="tabNameProjectResults" type="text" /></div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:18px; flex-wrap:wrap;">
+        <h1 style="margin:0; color:var(--navy);">Input Dashboard</h1>
+        <button class="btn-blue" id="addSectionBtn">+ Add Section</button>
+      </div>
+      <div id="inputSections"></div>
+    </section>
+
+    <section id="resultsTab" class="hidden">
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div id="resultsSections"></div>
+    </section>
+
+    <section id="projectTab" class="hidden">
+      <div class="sub-tabs">
+        <button class="sub-tab active" id="projectInputSubBtn">Project Input</button>
+        <button class="sub-tab" id="projectResultsSubBtn">Project Results</button>
+      </div>
+
+      <div id="projectInputPanel">
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:18px; flex-wrap:wrap;">
+          <h1 style="margin:0; color:var(--navy);">Project Input</h1>
+          <button class="btn-blue" id="addProjectSectionBtn">+ Add Project Section</button>
+        </div>
+        <div id="projectInputSections"></div>
+      </div>
+
+      <div id="projectResultsPanel" class="hidden">
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:18px; flex-wrap:wrap;">
+          <h1 style="margin:0; color:var(--navy);">Project Results</h1>
+        </div>
+        <div class="project-results-grid" id="projectResultsGrid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ── Storage Keys ──
+    const STORAGE_KEY_PREFIX = 'remax_progress_dashboard_v5_month_';
+    const PROJECT_KEY = 'remax_project_dashboard_v2';
+    const TAB_NAMES_KEY = 'remax_dashboard_tab_names_v1';
+    const ACTIVE_MONTH_KEY = 'remax_dashboard_active_month_v1';
+
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    let activeMonthIndex = parseInt(localStorage.getItem(ACTIVE_MONTH_KEY) || String(new Date().getMonth()));
+    if (isNaN(activeMonthIndex) || activeMonthIndex < 0 || activeMonthIndex > 11) activeMonthIndex = new Date().getMonth();
+
+    // Per-month data cache
+    let monthDataCache = {};
+
+    function getMonthStorageKey(monthIdx) {
+      return STORAGE_KEY_PREFIX + monthIdx;
+    }
+
+    function loadMonthData(monthIdx) {
+      if (monthDataCache[monthIdx]) return monthDataCache[monthIdx];
+      const raw = localStorage.getItem(getMonthStorageKey(monthIdx));
+      let d = raw ? JSON.parse(raw) : null;
+      if (!d) d = defaultData();
+      migrateOldMetrics(d);
+      monthDataCache[monthIdx] = d;
+      return d;
+    }
+
+    function saveMonthData(monthIdx, d) {
+      monthDataCache[monthIdx] = d;
+      localStorage.setItem(getMonthStorageKey(monthIdx), JSON.stringify(d));
+    }
+
+    // Active month data accessor
+    function getData() { return loadMonthData(activeMonthIndex); }
+    function setData(d) { saveMonthData(activeMonthIndex, d); }
+
+    let projectData = JSON.parse(localStorage.getItem(PROJECT_KEY) || 'null') || defaultProjectData();
+    let tabNames = JSON.parse(localStorage.getItem(TAB_NAMES_KEY) || 'null') || defaultTabNames();
+    let activeMainTab = 'input';
+    let activeProjectSubTab = 'input';
+
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+
+    function createMetric(name = 'New Metric', type = 'target', showInSummary = false) {
+      return { id: uid(), name, type, display: 'circle', showInSummary, dailyA: '', dailyB: '', weeklyA: '', weeklyB: '', monthlyA: '', monthlyB: '' };
+    }
+
+    function createTask(name = 'New Task', status = 'Pending') {
+      return { id: uid(), name, status };
+    }
+
+    function defaultTabNames() {
+      return {
+        input: 'Input',
+        results: 'Results',
+        project: 'Project Dashboard',
+        projectInput: 'Project Input',
+        projectResults: 'Project Results'
+      };
+    }
+
+    function defaultData() {
+      return [
+        { id: uid(), name: 'Recruitment', metrics: [
+          createMetric('Booked Meetings with Potential Agents'),
+          createMetric('Meetings Conducted with Collection Agents'),
+          createMetric('Agents Hired', 'target', true),
+          createMetric('Collection Agents Signed', 'target', true),
+          createMetric('Brand Ambassadors Signed', 'target', true),
+          createMetric('REMAX Partners Signed')
+        ]},
+        { id: uid(), name: 'International Referrals', metrics: [
+          createMetric('Number of Emails to Agency Managers'),
+          createMetric('Webinars Conducted'),
+          createMetric('WhatsApp Channel Updates'),
+          createMetric('Monthly Response Rate', 'response')
+        ]},
+        { id: uid(), name: 'Sales & Listings', metrics: [
+          createMetric('Quality Listing Obtained'),
+          createMetric('Personal Gross Commission Income', 'target', true),
+          createMetric('Team Gross Commission Income', 'target', true),
+          createMetric('Gross Commission Achieved')
+        ]},
+        { id: uid(), name: 'Education & Exposure', metrics: [
+          createMetric('Trainings Conducted'),
+          createMetric('Social Media Posts')
+        ]}
+      ];
+    }
+
+    function defaultProjectData() {
+      return [
+        { id: uid(), name: 'Website', tasks: [createTask('Define website structure', 'Pending'), createTask('Prepare content', 'On Hold'), createTask('Review design', 'In Progress')] },
+        { id: uid(), name: 'Webinar', tasks: [createTask('Select topic', 'Pending'), createTask('Prepare invitation list', 'Pending'), createTask('Finalize presentation', 'On Hold')] },
+        { id: uid(), name: 'Investment Dinner', tasks: [createTask('Confirm venue', 'Pending'), createTask('Prepare guest list', 'In Progress'), createTask('Prepare pitch deck', 'On Hold')] }
+      ];
+    }
+
+    function migrateOldMetrics(d) {
+      const defaultSummaryNames = [
+        'Agents Hired',
+        'Collection Agents Signed',
+        'Brand Ambassadors Signed',
+        'Personal Gross Commission Income',
+        'Team Gross Commission Income'
+      ];
+      d.forEach(section => {
+        section.metrics.forEach(metric => {
+          if (metric.showInSummary === undefined) {
+            metric.showInSummary = defaultSummaryNames.some(name => metric.name.toLowerCase().includes(name.toLowerCase()));
+          }
+        });
+      });
+    }
+
+    function save() {
+      setData(getData());
+      localStorage.setItem(PROJECT_KEY, JSON.stringify(projectData));
+      localStorage.setItem(TAB_NAMES_KEY, JSON.stringify(tabNames));
+      localStorage.setItem(ACTIVE_MONTH_KEY, String(activeMonthIndex));
+    }
+
+    // ── CHANGE 1: Clear Achieved Data ──
+    function clearAchievedData() {
+      if (!confirm('Are you sure you want to clear achieved data?')) return;
+      const d = getData();
+      d.forEach(section => {
+        section.metrics.forEach(metric => {
+          // Clear only "B" (achieved) fields; leave "A" (target) untouched
+          metric.dailyB = '';
+          metric.weeklyB = '';
+          metric.monthlyB = '';
+          // For custom type, "A" IS the percentage (no B), so clear it too
+          if (metric.type === 'custom') {
+            metric.dailyA = '';
+            metric.weeklyA = '';
+            metric.monthlyA = '';
+          }
+        });
+      });
+      setData(d);
+      save();
+      render();
+    }
+
+    function switchMonth(idx) {
+      activeMonthIndex = idx;
+      localStorage.setItem(ACTIVE_MONTH_KEY, String(idx));
+      render();
+    }
+
+    function showTab(tab) {
+      activeMainTab = tab;
+      document.getElementById('inputTab').classList.toggle('hidden', tab !== 'input');
+      document.getElementById('resultsTab').classList.toggle('hidden', tab !== 'results');
+      document.getElementById('projectTab').classList.toggle('hidden', tab !== 'project');
+      document.getElementById('inputTabBtn').classList.toggle('active', tab === 'input');
+      document.getElementById('resultsTabBtn').classList.toggle('active', tab === 'results');
+      document.getElementById('projectTabBtn').classList.toggle('active', tab === 'project');
+      render();
+    }
+
+    function showProjectSubTab(tab) {
+      activeProjectSubTab = tab;
+      document.getElementById('projectInputPanel').classList.toggle('hidden', tab !== 'input');
+      document.getElementById('projectResultsPanel').classList.toggle('hidden', tab !== 'results');
+      document.getElementById('projectInputSubBtn').classList.toggle('active', tab === 'input');
+      document.getElementById('projectResultsSubBtn').classList.toggle('active', tab === 'results');
+      renderProject();
+    }
+
+    function updateTabName(key, value) {
+      tabNames[key] = value || defaultTabNames()[key];
+      save();
+      renderTabNames();
+    }
+
+    function renderTabNames() {
+      document.getElementById('inputTabBtn').textContent = tabNames.input;
+      document.getElementById('resultsTabBtn').textContent = tabNames.results;
+      document.getElementById('projectTabBtn').textContent = tabNames.project;
+      document.getElementById('projectInputSubBtn').textContent = tabNames.projectInput;
+      document.getElementById('projectResultsSubBtn').textContent = tabNames.projectResults;
+
+      document.getElementById('tabNameInput').value = tabNames.input;
+      document.getElementById('tabNameResults').value = tabNames.results;
+      document.getElementById('tabNameProject').value = tabNames.project;
+      document.getElementById('tabNameProjectInput').value = tabNames.projectInput;
+      document.getElementById('tabNameProjectResults').value = tabNames.projectResults;
+    }
+
+    // ── CHANGE 3: Render Month Tabs ──
+    function renderMonthTabs() {
+      const bar = document.getElementById('monthTabsBar');
+      bar.innerHTML = MONTHS.map((m, i) => `
+        <button class="month-tab ${i === activeMonthIndex ? 'active' : ''}" onclick="switchMonth(${i})">${m}</button>
+      `).join('');
+      document.getElementById('activeMonthLabel').textContent = MONTHS[activeMonthIndex];
+    }
+
+    function addSection() {
+      const d = getData();
+      d.push({ id: uid(), name: 'New Section', metrics: [] });
+      setData(d);
+      save(); render();
+    }
+
+    function deleteSection(sectionId) {
+      if (!confirm('Delete this section?')) return;
+      const d = getData().filter(s => s.id !== sectionId);
+      setData(d);
+      save(); render();
+    }
+
+    function addMetric(sectionId) {
+      const d = getData();
+      const section = d.find(s => s.id === sectionId);
+      if (!section) return;
+      section.metrics.push(createMetric());
+      setData(d);
+      save(); render();
+    }
+
+    function deleteMetric(sectionId, metricId) {
+      const d = getData();
+      const section = d.find(s => s.id === sectionId);
+      if (!section) return;
+      section.metrics = section.metrics.filter(m => m.id !== metricId);
+      setData(d);
+      save(); render();
+    }
+
+    function updateSection(sectionId, value) {
+      const d = getData();
+      const section = d.find(s => s.id === sectionId);
+      if (section) section.name = value;
+      setData(d);
+      save(); renderResults();
+    }
+
+    function updateMetric(sectionId, metricId, field, value) {
+      const d = getData();
+      const section = d.find(s => s.id === sectionId);
+      if (!section) return;
+      const metric = section.metrics.find(m => m.id === metricId);
+      if (metric) metric[field] = value;
+      setData(d);
+      save(); renderResults();
+    }
+
+    function toggleSummaryCard(sectionId, metricId) {
+      const d = getData();
+      const section = d.find(s => s.id === sectionId);
+      if (!section) return;
+      const metric = section.metrics.find(m => m.id === metricId);
+      if (!metric) return;
+      metric.showInSummary = !metric.showInSummary;
+      setData(d);
+      save(); render();
+    }
+
+    function addProjectSection() {
+      projectData.push({ id: uid(), name: 'New Project Section', tasks: [] });
+      save(); renderProject();
+    }
+
+    function deleteProjectSection(sectionId) {
+      if (!confirm('Delete this project section?')) return;
+      projectData = projectData.filter(s => s.id !== sectionId);
+      save(); renderProject();
+    }
+
+    function updateProjectSection(sectionId, value) {
+      const section = projectData.find(s => s.id === sectionId);
+      if (section) section.name = value;
+      save(); renderProjectResults();
+    }
+
+    function addTask(sectionId) {
+      const section = projectData.find(s => s.id === sectionId);
+      if (!section) return;
+      section.tasks.push(createTask());
+      save(); renderProject();
+    }
+
+    function deleteTask(sectionId, taskId) {
+      const section = projectData.find(s => s.id === sectionId);
+      if (!section) return;
+      section.tasks = section.tasks.filter(t => t.id !== taskId);
+      save(); renderProject();
+    }
+
+    function updateTask(sectionId, taskId, field, value) {
+      const section = projectData.find(s => s.id === sectionId);
+      if (!section) return;
+      const task = section.tasks.find(t => t.id === taskId);
+      if (task) task[field] = value;
+      save(); renderProjectResults();
+    }
+
+    function formatNumber(value) {
+      if (value === null || value === undefined || value === '') return '0';
+      const stringValue = String(value).replace(/,/g, '').trim();
+      if (stringValue === '' || isNaN(Number(stringValue))) return String(value);
+      return Number(stringValue).toLocaleString('en-US');
+    }
+
+    function labelA(type) {
+      if (type === 'target') return 'Target';
+      if (type === 'conversion') return 'Total';
+      if (type === 'response') return 'Sent';
+      return 'Percentage';
+    }
+
+    function labelB(type) {
+      if (type === 'target') return 'Achieved';
+      if (type === 'conversion') return 'Converted';
+      if (type === 'response') return 'Responses';
+      return 'N/A';
+    }
+
+    function calc(metric, period) {
+      const a = parseFloat(String(metric[period + 'A']).replace(/,/g, ''));
+      const b = parseFloat(String(metric[period + 'B']).replace(/,/g, ''));
+      if (metric.type === 'custom') return isNaN(a) ? null : Math.max(0, a);
+      if (isNaN(a) || isNaN(b) || a <= 0) return null;
+      return Math.max(0, (b / a) * 100);
+    }
+
+    function colorFor(pct) {
+      if (pct === null) return 'var(--grey)';
+      if (pct < 50) return 'var(--red)';
+      if (pct < 80) return 'var(--orange)';
+      return 'var(--green)';
+    }
+
+    function formatPct(pct) {
+      if (pct === null) return 'N/A';
+      return Math.round(pct) + '%';
+    }
+
+    function ratioText(metric, period) {
+      if (isNotTracked(metric, period)) return '';
+      if (metric.type === 'custom') return formatPct(calc(metric, period));
+      const a = metric[period + 'A'];
+      const b = metric[period + 'B'];
+      if (!a && !b) return '— / —';
+      return formatNumber(b || 0) + ' / ' + formatNumber(a || 0);
+    }
+
+    // ── CHANGE 2: Improved N/A display ──
+    // Returns true if this period has no data entered at all
+    function isNotTracked(metric, period) {
+      const a = metric[period + 'A'];
+      const b = metric[period + 'B'];
+      if (metric.type === 'custom') return !a && a !== 0;
+      return (!a || a === '') && (!b || b === '');
+    }
+
+    function notTrackedBadge() {
+      return '<span class="not-tracked-badge">Not tracked</span>';
+    }
+
+    function visual(metric, period) {
+      // If no data entered for this period, show "not tracked" badge instead of circle
+      if (isNotTracked(metric, period)) {
+        return notTrackedBadge();
+      }
+
+      const pct = calc(metric, period);
+      const color = colorFor(pct);
+      const safePct = pct === null ? 0 : Math.min(pct, 100);
+
+      if (metric.display === 'bar') {
+        return '<strong>' + formatPct(pct) + '</strong><div class="bar-wrap"><div class="bar" style="width:' + safePct + '%; background:' + color + ';"></div></div>';
+      }
+      if (metric.display === 'card') {
+        return '<span class="percentage-card" style="color:' + color + ';">' + formatPct(pct) + '</span>';
+      }
+      return '<div class="circle" style="--pct:' + safePct + '; --color:' + color + ';"><div class="circle-inner">' + formatPct(pct) + '</div></div>';
+    }
+
+    function summaryVisual(metric) {
+      if (!metric) {
+        return '<div class="summary-progress-row"><div class="circle summary-circle" style="--pct:0; --color:var(--grey);"><div class="circle-inner">0</div></div><div class="summary-target">No data</div></div>';
+      }
+
+      const pct = calc(metric, 'monthly');
+      const color = colorFor(pct);
+      const safePct = pct === null ? 0 : Math.min(pct, 100);
+      const achieved = metric.type === 'custom' ? formatPct(pct) : formatNumber(metric.monthlyB || 0);
+      const target = metric.type === 'custom' ? '100%' : formatNumber(metric.monthlyA || 0);
+
+      return '<div class="summary-progress-row">' +
+        '<div class="circle summary-circle" style="--pct:' + safePct + '; --color:' + color + ';"><div class="circle-inner">' + achieved + '</div></div>' +
+        '<div class="summary-target"><strong>' + achieved + '</strong> / ' + target + '<span>' + formatPct(pct) + ' achieved</span></div>' +
+      '</div>';
+    }
+
+    function projectVisual(section) {
+      const total = section.tasks.length;
+      const done = section.tasks.filter(t => t.status === 'Done').length;
+      const pct = total ? Math.round((done / total) * 100) : null;
+      const color = colorFor(pct);
+      const safePct = pct === null ? 0 : Math.min(pct, 100);
+
+      return '<div class="project-progress-row">' +
+        '<div class="circle project-circle" style="--pct:' + safePct + '; --color:' + color + ';"><div class="circle-inner">' + formatPct(pct) + '</div></div>' +
+        '<div class="project-target"><strong>' + formatNumber(done) + '</strong> / ' + formatNumber(total) + ' tasks done<span>' + formatPct(pct) + ' completed</span></div>' +
+      '</div>';
+    }
+
+    function renderInput() {
+      const data = getData();
+      const container = document.getElementById('inputSections');
+      if (!data.length) {
+        container.innerHTML = '<div class="empty">No sections yet. Add your first section.</div>';
+        return;
+      }
+
+      container.innerHTML = data.map(section => `
+        <div class="input-section">
+          <div class="input-section-top">
+            <input class="section-name" value="${escapeHtml(section.name)}" oninput="updateSection('${section.id}', this.value)" />
+            <button class="btn-danger" onclick="deleteSection('${section.id}')">Delete</button>
+          </div>
+          ${section.metrics.map(metric => `
+            <div class="metric-editor">
+              <div class="metric-title-row">
+                <input value="${escapeHtml(metric.name)}" placeholder="Metric name" oninput="updateMetric('${section.id}', '${metric.id}', 'name', this.value)" />
+                <select onchange="updateMetric('${section.id}', '${metric.id}', 'type', this.value)">
+                  <option value="target" ${metric.type === 'target' ? 'selected' : ''}>Target Progress</option>
+                  <option value="conversion" ${metric.type === 'conversion' ? 'selected' : ''}>Conversion Rate</option>
+                  <option value="response" ${metric.type === 'response' ? 'selected' : ''}>Response Rate</option>
+                  <option value="custom" ${metric.type === 'custom' ? 'selected' : ''}>Custom Percentage</option>
+                </select>
+                <select onchange="updateMetric('${section.id}', '${metric.id}', 'display', this.value)">
+                  <option value="circle" ${metric.display === 'circle' ? 'selected' : ''}>Progress Circle</option>
+                  <option value="bar" ${metric.display === 'bar' ? 'selected' : ''}>Progress Bar</option>
+                  <option value="card" ${metric.display === 'card' ? 'selected' : ''}>Percentage Card</option>
+                </select>
+                <button class="btn-card ${metric.showInSummary ? 'active' : ''}" onclick="toggleSummaryCard('${section.id}', '${metric.id}')">${metric.showInSummary ? 'In Cards' : 'Add to Cards'}</button>
+                <button class="btn-danger" onclick="deleteMetric('${section.id}', '${metric.id}')">Delete Metric</button>
+              </div>
+              <div class="editor-grid">
+                ${['daily','weekly','monthly'].map(period => `
+                  <div>
+                    <label>${period} ${labelA(metric.type)}</label>
+                    <input type="number" value="${metric[period + 'A']}" oninput="updateMetric('${section.id}', '${metric.id}', '${period}A', this.value)" />
+                  </div>
+                  <div>
+                    <label>${period} ${labelB(metric.type)}</label>
+                    <input type="number" value="${metric[period + 'B']}" oninput="updateMetric('${section.id}', '${metric.id}', '${period}B', this.value)" ${metric.type === 'custom' ? 'disabled' : ''} />
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('')}
+          <div style="margin-top:14px;"><button class="btn-blue" onclick="addMetric('${section.id}')">+ Add Metric</button></div>
+        </div>
+      `).join('');
+    }
+
+    function renderResults() {
+      const data = getData();
+      const summary = document.getElementById('summaryGrid');
+      const container = document.getElementById('resultsSections');
+      const periodText = MONTHS[activeMonthIndex];
+      const allMetrics = data.flatMap(s => s.metrics.map(m => ({ ...m, section: s.name })));
+      const summaryMetrics = allMetrics.filter(metric => metric.showInSummary);
+
+      summary.innerHTML = summaryMetrics.length
+        ? summaryMetrics.map(metric => `<div class="summary-card"><h3>${escapeHtml(metric.name)} — ${escapeHtml(periodText)}</h3>${summaryVisual(metric)}</div>`).join('')
+        : '<div class="empty">No summary cards selected. Go to the Input tab and click "Add to Cards" on any metric.</div>';
+
+      if (!data.length) {
+        container.innerHTML = '<div class="empty">No results yet. Add sections and metrics in the Input tab.</div>';
+        return;
+      }
+
+      container.innerHTML = data.map(section => {
+        const scores = section.metrics.map(m => calc(m, 'monthly')).filter(v => v !== null);
+        const avg = scores.length ? Math.round(scores.reduce((a,b) => a + b, 0) / scores.length) : null;
+        return `
+          <div class="section">
+            <div class="section-header"><span>${escapeHtml(section.name)}</span><span>Monthly Avg: ${formatPct(avg)}</span></div>
+            <table>
+              <thead>
+                <tr><th>Metric</th><th>Daily</th><th>Progress</th><th>Weekly</th><th>Progress</th><th>Monthly</th><th>Progress</th></tr>
+              </thead>
+              <tbody>
+                ${section.metrics.map(metric => `
+                  <tr>
+                    <td><strong>${escapeHtml(metric.name)}</strong></td>
+                    <td>${ratioText(metric, 'daily')}</td>
+                    <td>${visual(metric, 'daily')}</td>
+                    <td>${ratioText(metric, 'weekly')}</td>
+                    <td>${visual(metric, 'weekly')}</td>
+                    <td>${ratioText(metric, 'monthly')}</td>
+                    <td>${visual(metric, 'monthly')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderProjectInput() {
+      const container = document.getElementById('projectInputSections');
+      if (!projectData.length) {
+        container.innerHTML = '<div class="empty">No project sections yet. Add your first project section.</div>';
+        return;
+      }
+
+      container.innerHTML = projectData.map(section => `
+        <div class="input-section">
+          <div class="input-section-top">
+            <input class="section-name" value="${escapeHtml(section.name)}" oninput="updateProjectSection('${section.id}', this.value)" />
+            <button class="btn-danger" onclick="deleteProjectSection('${section.id}')">Delete</button>
+          </div>
+          ${section.tasks.map(task => `
+            <div class="task-editor">
+              <div class="task-title-row">
+                <input value="${escapeHtml(task.name)}" placeholder="Task name" oninput="updateTask('${section.id}', '${task.id}', 'name', this.value)" />
+                <select onchange="updateTask('${section.id}', '${task.id}', 'status', this.value)">
+                  <option value="On Hold" ${task.status === 'On Hold' ? 'selected' : ''}>On Hold</option>
+                  <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                  <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                  <option value="Done" ${task.status === 'Done' ? 'selected' : ''}>Done</option>
+                </select>
+                <button class="btn-danger" onclick="deleteTask('${section.id}', '${task.id}')">Delete Task</button>
+              </div>
+            </div>
+          `).join('')}
+          <div style="margin-top:14px;"><button class="btn-blue" onclick="addTask('${section.id}')">+ Add Task</button></div>
+        </div>
+      `).join('');
+    }
+
+    function renderProjectResults() {
+      const container = document.getElementById('projectResultsGrid');
+      if (!projectData.length) {
+        container.innerHTML = '<div class="empty">No project results yet. Add project sections and tasks.</div>';
+        return;
+      }
+
+      container.innerHTML = projectData.map(section => `
+        <div class="project-card">
+          <h3>${escapeHtml(section.name)}</h3>
+          ${projectVisual(section)}
+        </div>
+      `).join('');
+    }
+
+    function renderProject() {
+      renderProjectInput();
+      renderProjectResults();
+    }
+
+    function render() {
+      renderMonthTabs();
+      renderTabNames();
+      renderInput();
+      renderResults();
+      renderProject();
+      showProjectSubTab(activeProjectSubTab);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    document.getElementById('inputTabBtn').addEventListener('click', () => showTab('input'));
+    document.getElementById('resultsTabBtn').addEventListener('click', () => showTab('results'));
+    document.getElementById('projectTabBtn').addEventListener('click', () => showTab('project'));
+    document.getElementById('projectInputSubBtn').addEventListener('click', () => showProjectSubTab('input'));
+    document.getElementById('projectResultsSubBtn').addEventListener('click', () => showProjectSubTab('results'));
+    document.getElementById('addSectionBtn').addEventListener('click', addSection);
+    document.getElementById('addProjectSectionBtn').addEventListener('click', addProjectSection);
+    document.getElementById('clearAchievedBtn').addEventListener('click', clearAchievedData);
+    document.getElementById('tabNameInput').addEventListener('input', e => updateTabName('input', e.target.value));
+    document.getElementById('tabNameResults').addEventListener('input', e => updateTabName('results', e.target.value));
+    document.getElementById('tabNameProject').addEventListener('input', e => updateTabName('project', e.target.value));
+    document.getElementById('tabNameProjectInput').addEventListener('input', e => updateTabName('projectInput', e.target.value));
+    document.getElementById('tabNameProjectResults').addEventListener('input', e => updateTabName('projectResults', e.target.value));
+
+    render();
+  </script>
+</body>
+</html>
