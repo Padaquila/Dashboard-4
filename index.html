@@ -432,7 +432,29 @@
 
     .metric-editor, .task-editor { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 12px; background: #F7F9FC; }
 
-    .metric-title-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr auto auto; gap: 10px; align-items: center; }
+    .move-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .btn-move {
+      background: #eef2ff;
+      color: var(--navy);
+      border: 1px solid #c7d7fe;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 11px;
+      line-height: 1.4;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .btn-move:hover { background: var(--navy); color: white; }
+    .btn-move:disabled { opacity: 0.25; cursor: default; background: #eef2ff; color: var(--navy); }
+
+    .metric-title-row { display: grid; grid-template-columns: auto 1.5fr 1fr 1fr auto auto; gap: 10px; align-items: center; }
     .task-title-row { display: grid; grid-template-columns: 1.6fr 1fr auto; gap: 10px; align-items: center; }
 
     .editor-grid { display: grid; grid-template-columns: repeat(6, minmax(110px, 1fr)); gap: 10px; margin-top: 12px; }
@@ -525,7 +547,10 @@
 
       <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:18px; flex-wrap:wrap;">
         <h1 style="margin:0; color:var(--navy);">Input Dashboard</h1>
-        <button class="btn-blue" id="addSectionBtn">+ Add Section</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn-warning" id="importTargetsBtn" style="font-size:13px;">↙ Import Targets from Previous Month</button>
+          <button class="btn-blue" id="addSectionBtn">+ Add Section</button>
+        </div>
       </div>
       <div id="inputSections"></div>
     </section>
@@ -580,11 +605,31 @@
     function loadMonthData(monthIdx) {
       if (monthDataCache[monthIdx]) return monthDataCache[monthIdx];
       const raw = localStorage.getItem(getMonthStorageKey(monthIdx));
-      let d = raw ? JSON.parse(raw) : null;
-      if (!d) d = defaultData();
-      migrateOldMetrics(d);
-      monthDataCache[monthIdx] = d;
-      return d;
+      if (raw) {
+        const d = JSON.parse(raw);
+        migrateOldMetrics(d);
+        monthDataCache[monthIdx] = d;
+        return d;
+      }
+      // Month has never been saved — return null so callers can decide what to do
+      return null;
+    }
+
+    function getOrInitMonthData(monthIdx) {
+      const existing = loadMonthData(monthIdx);
+      if (existing) return existing;
+      // Clone structure from active month (empty data fields) so syncs work correctly
+      const source = loadMonthData(activeMonthIndex);
+      const clone = JSON.parse(JSON.stringify(source)).map(section => ({
+        ...section,
+        metrics: section.metrics.map(m => ({
+          ...m,
+          dailyA: '', dailyB: '', weeklyA: '', weeklyB: '', monthlyA: '', monthlyB: ''
+        }))
+      }));
+      migrateOldMetrics(clone);
+      monthDataCache[monthIdx] = clone;
+      return clone;
     }
 
     function saveMonthData(monthIdx, d) {
@@ -593,7 +638,14 @@
     }
 
     // Active month data accessor
-    function getData() { return loadMonthData(activeMonthIndex); }
+    function getData() {
+      const existing = loadMonthData(activeMonthIndex);
+      if (existing) return existing;
+      const d = defaultData();
+      migrateOldMetrics(d);
+      monthDataCache[activeMonthIndex] = d;
+      return d;
+    }
     function setData(d) { saveMonthData(activeMonthIndex, d); }
 
     let projectData = JSON.parse(localStorage.getItem(PROJECT_KEY) || 'null') || defaultProjectData();
@@ -780,8 +832,20 @@
       const d = getData();
       const section = d.find(s => s.id === sectionId);
       if (!section) return;
-      section.metrics.push(createMetric());
+      const newMetric = createMetric();
+      section.metrics.push(newMetric);
       setData(d);
+
+      // Add the same metric (structure only, empty data) to all other months
+      MONTHS.forEach((_, monthIdx) => {
+        if (monthIdx === activeMonthIndex) return;
+        const otherData = getOrInitMonthData(monthIdx);
+        const otherSection = otherData.find(s => s.id === sectionId);
+        if (!otherSection) return;
+        otherSection.metrics.push({ ...newMetric, dailyA: '', dailyB: '', weeklyA: '', weeklyB: '', monthlyA: '', monthlyB: '' });
+        saveMonthData(monthIdx, otherData);
+      });
+
       save(); render();
     }
 
@@ -791,6 +855,17 @@
       if (!section) return;
       section.metrics = section.metrics.filter(m => m.id !== metricId);
       setData(d);
+
+      // Remove the same metric from all other months
+      MONTHS.forEach((_, monthIdx) => {
+        if (monthIdx === activeMonthIndex) return;
+        const otherData = getOrInitMonthData(monthIdx);
+        const otherSection = otherData.find(s => s.id === sectionId);
+        if (!otherSection) return;
+        otherSection.metrics = otherSection.metrics.filter(m => m.id !== metricId);
+        saveMonthData(monthIdx, otherData);
+      });
+
       save(); render();
     }
 
@@ -802,6 +877,9 @@
       save(); renderResults();
     }
 
+    // Fields that are structural (shared across months) vs data (per-month)
+    const STRUCTURAL_FIELDS = new Set(['name', 'type', 'display', 'showInSummary']);
+
     function updateMetric(sectionId, metricId, field, value) {
       const d = getData();
       const section = d.find(s => s.id === sectionId);
@@ -809,6 +887,21 @@
       const metric = section.metrics.find(m => m.id === metricId);
       if (metric) metric[field] = value;
       setData(d);
+
+      // Sync structural fields to all other months; skip data fields
+      if (STRUCTURAL_FIELDS.has(field)) {
+        MONTHS.forEach((_, monthIdx) => {
+          if (monthIdx === activeMonthIndex) return;
+          const otherData = getOrInitMonthData(monthIdx);
+          const otherSection = otherData.find(s => s.id === sectionId);
+          if (!otherSection) return;
+          const otherMetric = otherSection.metrics.find(m => m.id === metricId);
+          if (!otherMetric) return;
+          otherMetric[field] = value;
+          saveMonthData(monthIdx, otherData);
+        });
+      }
+
       save(); renderResults();
     }
 
@@ -820,6 +913,19 @@
       if (!metric) return;
       metric.showInSummary = !metric.showInSummary;
       setData(d);
+
+      // Sync showInSummary to all other months
+      MONTHS.forEach((_, monthIdx) => {
+        if (monthIdx === activeMonthIndex) return;
+        const otherData = getOrInitMonthData(monthIdx);
+        const otherSection = otherData.find(s => s.id === sectionId);
+        if (!otherSection) return;
+        const otherMetric = otherSection.metrics.find(m => m.id === metricId);
+        if (!otherMetric) return;
+        otherMetric.showInSummary = metric.showInSummary;
+        saveMonthData(monthIdx, otherData);
+      });
+
       save(); render();
     }
 
@@ -988,9 +1094,13 @@
             <input class="section-name" value="${escapeHtml(section.name)}" oninput="updateSection('${section.id}', this.value)" />
             <button class="btn-danger" onclick="deleteSection('${section.id}')">Delete</button>
           </div>
-          ${section.metrics.map(metric => `
+          ${section.metrics.map((metric, idx) => `
             <div class="metric-editor">
               <div class="metric-title-row">
+                <div class="move-controls">
+                  <button class="btn-move" onclick="moveMetric('${section.id}', '${metric.id}', -1)" ${idx === 0 ? 'disabled' : ''} title="Move Up">▲</button>
+                  <button class="btn-move" onclick="moveMetric('${section.id}', '${metric.id}', 1)" ${idx === section.metrics.length - 1 ? 'disabled' : ''} title="Move Down">▼</button>
+                </div>
                 <input value="${escapeHtml(metric.name)}" placeholder="Metric name" oninput="updateMetric('${section.id}', '${metric.id}', 'name', this.value)" />
                 <select onchange="updateMetric('${section.id}', '${metric.id}', 'type', this.value)">
                   <option value="target" ${metric.type === 'target' ? 'selected' : ''}>Target Progress</option>
@@ -1141,12 +1251,81 @@
         .replaceAll("'", '&#039;');
     }
 
+    // ── Move metric up/down ──
+    function moveMetric(sectionId, metricId, direction) {
+      const d = getData();
+      const section = d.find(s => s.id === sectionId);
+      if (!section) return;
+      const idx = section.metrics.findIndex(m => m.id === metricId);
+      const newIdx = idx + direction;
+      if (newIdx < 0 || newIdx >= section.metrics.length) return;
+      const [moved] = section.metrics.splice(idx, 1);
+      section.metrics.splice(newIdx, 0, moved);
+      setData(d);
+
+      // Propagate the new metric order to all other months
+      const newOrder = section.metrics.map(m => m.id);
+      MONTHS.forEach((_, monthIdx) => {
+        if (monthIdx === activeMonthIndex) return;
+        const otherData = getOrInitMonthData(monthIdx);
+        const otherSection = otherData.find(s => s.id === sectionId);
+        if (!otherSection) return;
+        // Re-sort otherSection.metrics to match newOrder; metrics not in newOrder stay at end
+        otherSection.metrics.sort((a, b) => {
+          const ai = newOrder.indexOf(a.id);
+          const bi = newOrder.indexOf(b.id);
+          if (ai === -1 && bi === -1) return 0;
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        });
+        saveMonthData(monthIdx, otherData);
+      });
+
+      save();
+      renderInput();
+      renderResults();
+    }
+
+    // ── Enhancement 2: Import targets from previous month ──
+    function importTargetsFromPreviousMonth() {
+      if (activeMonthIndex === 0) {
+        alert('January is the first month — there is no previous month to import from.');
+        return;
+      }
+      const prevIdx = activeMonthIndex - 1;
+      const prevMonthName = MONTHS[prevIdx];
+      const currMonthName = MONTHS[activeMonthIndex];
+      if (!confirm(`Import targets from ${prevMonthName} into ${currMonthName}?\n\nThis will overwrite existing target (A) values for matching metrics. Achieved values will not be changed.`)) return;
+
+      const prevData = loadMonthData(prevIdx) || getOrInitMonthData(prevIdx);
+      const currData = getData();
+
+      // Match sections by name, then metrics by name — copy only "A" (target) fields
+      currData.forEach(currSection => {
+        const prevSection = prevData.find(s => s.name === currSection.name);
+        if (!prevSection) return;
+        currSection.metrics.forEach(currMetric => {
+          const prevMetric = prevSection.metrics.find(m => m.name === currMetric.name);
+          if (!prevMetric) return;
+          currMetric.dailyA   = prevMetric.dailyA;
+          currMetric.weeklyA  = prevMetric.weeklyA;
+          currMetric.monthlyA = prevMetric.monthlyA;
+        });
+      });
+
+      setData(currData);
+      save();
+      render();
+    }
+
     document.getElementById('inputTabBtn').addEventListener('click', () => showTab('input'));
     document.getElementById('resultsTabBtn').addEventListener('click', () => showTab('results'));
     document.getElementById('projectTabBtn').addEventListener('click', () => showTab('project'));
     document.getElementById('projectInputSubBtn').addEventListener('click', () => showProjectSubTab('input'));
     document.getElementById('projectResultsSubBtn').addEventListener('click', () => showProjectSubTab('results'));
     document.getElementById('addSectionBtn').addEventListener('click', addSection);
+    document.getElementById('importTargetsBtn').addEventListener('click', importTargetsFromPreviousMonth);
     document.getElementById('addProjectSectionBtn').addEventListener('click', addProjectSection);
     document.getElementById('clearAchievedBtn').addEventListener('click', clearAchievedData);
     document.getElementById('tabNameInput').addEventListener('input', e => updateTabName('input', e.target.value));
